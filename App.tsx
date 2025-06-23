@@ -27,7 +27,8 @@ import {
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
 import CameraView from './components/CameraView';
-
+import {useGazeCapture} from './hooks/useGazeCapture';
+import * as tf from '@tensorflow/tfjs';
 type SectionProps = PropsWithChildren<{
   title: string;
 }>;
@@ -40,6 +41,9 @@ function App(): React.JSX.Element {
   const [agentResponse, setAgentResponse] = useState('');
   // const {cameraRef, captureGaze} = useGazeCapture();
   const isDarkMode = useColorScheme() === 'dark';
+  const {cameraRef, captureGaze} = useGazeCapture();
+  const [model, setModel] = useState<tf.GraphModel | null>(null);
+
   const userId = 'user123';
 
   const backgroundStyle = {
@@ -95,6 +99,25 @@ function App(): React.JSX.Element {
     }
     setTimeout(() => setStatus(''), 3000);
   };
+  const handleCaptureGaze = async () => {
+    try {
+      setStatus('Capturing gaze frame...');
+      const data =  await captureGaze(userId);
+
+      if (model && data) {
+        const input = tf.tensor([[0]]); // TODO: Replace with processed data
+        const result = model.predict(input) as tf.Tensor;
+        console.log('Model output:', result.toString());
+      }
+
+      console.log('Gaze Data Sent:', data);
+      setStatus('Gaze captured ✅');
+    } catch (error) {
+      console.error(error);
+      setStatus('Gaze capture failed ❌');
+    }
+    setTimeout(() => setStatus(''), 3000);
+  };
 
   const safePadding = '5%';
 
@@ -112,6 +135,11 @@ function App(): React.JSX.Element {
         style={styles.visibleTrigger}
         onPress={handleManualTrigger}>
         <Text style={styles.buttonText}>Manual Emergency Trigger</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.visibleTrigger}
+        onPress={handleCaptureGaze}>
+        <Text style={styles.buttonText}>Capture Gaze</Text> 
       </TouchableOpacity>
 
       {/* <TouchableOpacity
